@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音楽プレイリストメーカー</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { background-color: rgba(255, 255, 255, 0.95); max-width: 600px; width: 100%; margin: 20px auto; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { font-family: 'Noto Serif JP', serif; color: #d84315; font-size: 26px; text-align: center; margin-bottom: 10px; border-bottom: 2px solid #ffccbc; padding-bottom: 15px; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
+        
+        .policy-box { background-color: #fff8e1; border-left: 5px solid #ffb300; padding: 15px; margin-bottom: 25px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; line-height: 1.6; }
+        .policy-box h3 { color: #f57c00; margin: 0 0 5px 0; font-size: 15px; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; cursor: pointer; }
+        select { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 8px; background-color: #f9f9f9; cursor: pointer; transition: 0.2s; }
+        select:focus { border-color: #ff7e5f; outline: none; background-color: #fff; }
+        
+        .btn { display: block; width: 100%; padding: 15px; background: linear-gradient(to right, #ff7e5f, #feb47b); color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 30px; cursor: pointer; margin-top: 30px; box-shadow: 0 5px 15px rgba(255, 126, 95, 0.4); transition: 0.3s; }
+        .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-2px); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; transform: none; }
+        .btn-secondary { background: #9e9e9e; box-shadow: 0 5px 15px rgba(158, 158, 158, 0.4); }
+
+        .image-box img { width: 100%; border-radius: 10px; margin-bottom: 20px; }
+
+        #loading-screen, #result-screen, #error-screen { display: none; text-align: center; }
+        
+        .loader { border: 8px solid #f3f3f3; border-top: 8px solid #ff7e5f; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin: 30px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { font-size: 18px; font-weight: bold; color: #d84315; margin-top: 20px; }
+
+        .summary-box { background-color: #fce4ec; border: 1px solid #f8bbd0; border-radius: 8px; padding: 12px; margin-bottom: 20px; font-size: 14px; color: #880e4f; text-align: center; font-weight: bold; line-height: 1.5; }
+        .play-all-box { background-color: #fff3e0; border: 2px solid #ffb74d; border-radius: 10px; padding: 15px; margin-bottom: 25px; text-align: center; }
+        .play-all-title { font-weight: bold; color: #d84315; margin-top: 0; margin-bottom: 10px; }
+        .main-link-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .song-card { background: #fff; border: 1px solid #eee; border-left: 5px solid #ff7e5f; border-radius: 8px; padding: 15px; margin-bottom: 15px; text-align: left; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .song-title { font-size: 18px; font-weight: bold; color: #333; margin: 0 0 5px 0; }
+        .song-artist { font-size: 14px; color: #777; margin: 0 0 10px 0; }
+        .song-desc { font-size: 14px; color: #444; margin: 0 0 15px 0; line-height: 1.5; }
+        .link-group { display: flex; flex-direction: column; gap: 8px; }
+        .song-link { display: block; color: white; padding: 10px 0; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: bold; text-align: center; transition: 0.2s; }
+        .song-link:hover { opacity: 0.8; }
+        .youtube { background-color: #FF0000; }
+        .youtube-music { background-color: #030303; }
+        .match-label { display: inline-block; background-color: #fff3e0; color: #d84315; font-size: 11px; padding: 3px 8px; border-radius: 12px; margin-left: 10px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div id="input-screen">
+            <div class="image-box">
+                <img src="/assets/images/playlist-hero.jpg" alt="音楽のイメージ" onerror="this.style.display='none';">
+            </div>
+            <h1>元気に 楽しく美しく<br>AI選曲プレイリスト</h1>
+            <p class="subtitle">あなたに合わせた最高音質のプレイリストをお届けします。</p>
+
+            <div class="policy-box">
+                <h3>🎵 AIプロデュースのこだわり</h3>
+                <p>機械的な選曲を排除し、公式の高品質音源かつ十分な視聴回数を持つ名曲のみを厳選。ご指定の雰囲気に最もふさわしい上質な空間を演出します。</p>
+            </div>
+
+            <form id="playlist-form" onsubmit="handleFormSubmit(event)">
+                <div class="form-group">
+                    <label for="genre">1. 曲のジャンル（必須）</label>
+                    <select id="genre" name="genre" required>
+                        <option value="" disabled selected>ジャンルを選択してください</option>
+                        <option value="和風・お祭り">和風・お祭り</option>
+                        <option value="J-POP">J-POP</option>
+                        <option value="洋楽ポップス">洋楽ポップス</option>
+                        <option value="ロック">ロック</option>
+                        <option value="ヒップホップ・リズム音楽">ヒップホップ・リズム音楽</option>
+                        <option value="ジャズ・クラシック">ジャズ・クラシック</option>
+                        <option value="アニメ・ゲーム音楽">アニメ・ゲーム音楽</option>
+                        <option value="電子ダンス音楽">電子ダンス音楽</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="scene">2. 聞く場面・目的</label>
+                    <select id="scene" name="scene" required>
+                        <option value="" disabled selected>場面を選択してください</option>
+                        <option value="イベント・お祭り">イベント・お祭り</option>
+                        <option value="通勤・通学">通勤・通学</option>
+                        <option value="仕事・勉強">仕事・勉強</option>
+                        <option value="ドライブ">ドライブ</option>
+                        <option value="運動・ダンス">運動・ダンス</option>
+                        <option value="夜のリラックス">夜のリラックス</option>
+                        <option value="おまかせ">おまかせ</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tempo">3. 曲の速さと気分</label>
+                    <select id="tempo" name="tempo" required>
+                        <option value="" disabled selected>速さや気分を選択してください</option>
+                        <option value="速くて元気">速くて元気</option>
+                        <option value="ちょうどいい速さ">ちょうどいい速さ</option>
+                        <option value="ゆっくりで穏やか">ゆっくりで穏やか</option>
+                        <option value="熱くて力強い">熱くて力強い</option>
+                        <option value="おまかせ">おまかせ</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="voice">4. 声のタイプ</label>
+                    <select id="voice" name="voice" required>
+                        <option value="" disabled selected>声のタイプを選択してください</option>
+                        <option value="男性の歌声">男性の歌声</option>
+                        <option value="女性の歌声">女性の歌声</option>
+                        <option value="男女両方の歌声">男女両方の歌声</option>
+                        <option value="歌声なし">歌声なし</option>
+                        <option value="おまかせ">おまかせ</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="era">5. 発売された年代</label>
+                    <select id="era" name="era" required>
+                        <option value="" disabled selected>年代を選択してください</option>
+                        <option value="すべて">すべて</option>
+                        <option value="最新の流行曲">最新の流行曲</option>
+                        <option value="2010年代">2010年代</option>
+                        <option value="2000年代">2000年代</option>
+                        <option value="1990年代">1990年代</option>
+                        <option value="懐かしの名曲">懐かしの名曲</option>
+                    </select>
+                </div>
+                <button type="submit" id="submit-btn" class="btn">この条件でプレイリストを作成</button>
+            </form>
+        </div>
+
+        <div id="loading-screen">
+            <h1>AIが選曲しています</h1>
+            <div class="loader"></div>
+            <p class="loading-text">最適なプレイリストを生成しています...</p>
+        </div>
+
+        <div id="result-screen">
+            <h1>プレイリスト完成！</h1>
+            <p class="subtitle" id="result-subtitle">公式の高音質楽曲をお届けします</p>
+            <div class="summary-box" id="summary-text"></div>
+            
+            <div class="play-all-box" id="play-all-container">
+                <p class="play-all-title" id="play-all-title">▼ まとめて連続再生する ▼</p>
+                <div class="main-link-group" id="play-all-links"></div>
+            </div>
+
+            <div id="playlist-container"></div>
+            <button type="button" class="btn btn-secondary" onclick="resetApp()">条件を変えてもう一度つくる</button>
+        </div>
+
+        <div id="error-screen">
+            <h1 style="color: #d32f2f;">通信エラー</h1>
+            <div class="song-card" style="margin-top: 20px;">
+                <p style="text-align:center; color:#333; font-weight:bold;">システムの応答がありません。</p>
+                <p style="text-align:center; color:#666; font-size:14px;">インターネットの接続を確認するか、しばらく経ってから再度お試しください。</p>
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="resetApp()">最初の画面に戻る</button>
+        </div>
+
+    </div>
+
+    <script>
+        const escapeHTML = (str) => {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
+        // 【最終修正】正規表現と厳密なホワイトリスト検証による、安全なURLサニタイズ
+        const sanitizeURL = (url) => {
+            if (url == null) return '#';
+            const cleanUrl = String(url).trim();
+            const lowerUrl = cleanUrl.toLowerCase();
+            
+            // javascript: や data: などの危険なスキームを完全に遮断し、安全なスキームのみを許可
+            if (lowerUrl.startsWith('http://') || 
+                lowerUrl.startsWith('https://') || 
+                lowerUrl.startsWith('youtube://') || 
+                lowerUrl.startsWith('intent://')) {
+                return escapeHTML(cleanUrl);
+            }
+            return '#';
+        };
+
+        function showScreen(screenId) {
+            const screens = ['input-screen', 'loading-screen', 'result-screen', 'error-screen'];
+            screens.forEach(id => {
+                document.getElementById(id).style.display = (id === screenId) ? 'block' : 'none';
+            });
+            window.scrollTo(0, 0);
+        }
+
+        function resetApp() {
+            showScreen('input-screen');
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            showScreen('loading-screen');
+
+            const conditions = {
+                genre: document.getElementById('genre').value,
+                scene: document.getElementById('scene').value,
+                tempo: document.getElementById('tempo').value,
+                voice: document.getElementById('voice').value,
+                era: document.getElementById('era').value
+            };
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            try {
+                const response = await fetch('/api/v1/playlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(conditions),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error("サーバー通信エラー");
+                }
+
+                const data = await response.json();
+                
+                // 【最終修正】サーバーから返されたデータ構造の厳密なバリデーション
+                if (!data || typeof data !== 'object') {
+                    throw new Error("不正なデータ形式です");
+                }
+
+                renderPlaylist(conditions, data.songs, data.playAllUrlYoutube, data.playAllUrlMusic);
+
+            } catch (error) {
+                clearTimeout(timeoutId);
+                showScreen('error-screen');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        function renderPlaylist(cond, songs, ytPlayAll, ytmPlayAll) {
+            const sceneText = cond.scene === "おまかせ" ? "あらゆる場面" : `「${cond.scene}」の場面`;
+            const tempoText = cond.tempo === "おまかせ" ? "心地よい" : `${cond.tempo}な`;
+            const voiceText = cond.voice === "おまかせ" ? "こだわりの" : `${cond.voice}の`;
+            const eraText = cond.era === "すべて" ? "時代を超えた" : `${cond.era}の`;
+
+            document.getElementById('summary-text').innerText = `【選曲の要約】${cond.genre}を中心に、${sceneText}にふさわしい${tempoText}楽曲を厳選しました。（${voiceText}名曲 / ${eraText}ヒット曲）`;
+
+            const container = document.getElementById('playlist-container');
+            const playAllContainer = document.getElementById('play-all-container');
+            let htmlContent = '';
+
+            if (Array.isArray(songs) && songs.length > 0) {
+                const displaySongs = songs.slice(0, 10);
+
+                document.getElementById('result-subtitle').innerText = `厳しい条件をクリアした公式の高音質 ${displaySongs.length} 曲です`;
+                document.getElementById('play-all-title').innerText = `▼ ${displaySongs.length}曲まとめて連続再生する ▼`;
+                
+                displaySongs.forEach((song, index) => {
+                    const matchLabel = song && song.isRecommended ? `<span class="match-label">★条件一致</span>` : '';
+                    const title = song && song.title ? song.title : 'タイトル不明';
+                    const artist = song && song.artist ? song.artist : 'アーティスト不明';
+                    const desc = song && song.desc ? song.desc : '';
+                    const urlYt = song && song.url_yt ? song.url_yt : '#';
+                    const urlYtm = song && song.url_ytm ? song.url_ytm : '#';
+
+                    htmlContent += `
+                        <div class="song-card">
+                            <h2 class="song-title">${index + 1}. ${escapeHTML(title)} ${matchLabel}</h2>
+                            <p class="song-artist">歌手・アーティスト：${escapeHTML(artist)}</p>
+                            <p class="song-desc">${escapeHTML(desc)}</p>
+                            <div class="link-group">
+                                <a href="${sanitizeURL(urlYt)}" target="_blank" rel="noopener noreferrer" class="song-link youtube">YouTube</a>
+                                <a href="${sanitizeURL(urlYtm)}" target="_blank" rel="noopener noreferrer" class="song-link youtube-music">YouTube Music</a>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                let playAllHTML = '';
+                if (ytPlayAll) {
+                    playAllHTML += `<a href="${sanitizeURL(ytPlayAll)}" target="_blank" rel="noopener noreferrer" class="song-link youtube" style="padding: 10px 15px; flex: 1;">YouTube</a>`;
+                }
+                if (ytmPlayAll) {
+                    playAllHTML += `<a href="${sanitizeURL(ytmPlayAll)}" target="_blank" rel="noopener noreferrer" class="song-link youtube-music" style="padding: 10px 15px; flex: 1;">YouTube Music</a>`;
+                }
+
+                if (playAllHTML !== '') {
+                    document.getElementById('play-all-links').innerHTML = playAllHTML;
+                    playAllContainer.style.display = "block";
+                } else {
+                    playAllContainer.style.display = "none";
+                }
+            } else {
+                document.getElementById('result-subtitle').innerText = `条件に合致する楽曲が見つかりませんでした`;
+                playAllContainer.style.display = "none";
+                htmlContent = `<div class="song-card"><p style="text-align:center; color:#666; font-weight:bold;">指定された条件の楽曲が現在準備中です。<br>条件を少し緩めて再度お試しください。</p></div>`;
+            }
+
+            container.innerHTML = htmlContent;
+            showScreen('result-screen');
+        }
+    </script>
+</body>
+</html>
